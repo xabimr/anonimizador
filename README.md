@@ -21,13 +21,25 @@ Aplicación de escritorio para anonimizar documentos de investigación y manuscr
 
 > **Importante:** la detección automática no es infalible. Revisa siempre la lista de elementos anonimizados antes de difundir un documento. La herramienta no sustituye la revisión humana ni el cumplimiento del RGPD.
 
-## Instalación (macOS)
+## Instalación
 
-1. Descarga `Anonimizador.dmg` desde la sección [Releases](../../releases).
+La app es autocontenida: no hay que instalar Python ni ninguna dependencia. Descárgala desde la sección [Releases](../../releases).
+
+### macOS
+
+1. Descarga `Anonimizador.dmg`.
 2. Ábrelo y arrastra **Anonimizador** a la carpeta Aplicaciones.
 3. La primera vez, macOS avisará de que la app no procede de un desarrollador identificado. Haz clic derecho sobre la app → **Abrir**, o ve a *Ajustes del Sistema → Privacidad y seguridad → Abrir igualmente*.
 
-Requisitos: Mac con Apple Silicon (M1 o posterior) y macOS 14 o superior. La app es autocontenida, así que no hay que instalar Python ni ninguna dependencia.
+Requisitos: Mac con Apple Silicon (M1 o posterior) y macOS 14 o superior.
+
+### Windows
+
+1. Descarga `Anonimizador-Windows.zip`.
+2. Haz clic derecho sobre él → **Extraer todo** y guarda la carpeta donde quieras (por ejemplo, en Documentos).
+3. Abre `Anonimizador.exe`, dentro de la carpeta extraída. La primera vez, Windows SmartScreen avisará de que la app no está firmada: pulsa **Más información → Ejecutar de todas formas**.
+
+Requisitos: Windows 11 de 64 bits. También debería funcionar en Windows 10 con Microsoft Edge actualizado (la ventana usa su motor, WebView2), aunque no se ha probado. Para tenerla a mano, haz clic derecho sobre `Anonimizador.exe` → **Anclar a Inicio**.
 
 ## Uso desde el código
 
@@ -39,11 +51,13 @@ uv run python main.py          # ventana nativa
 uv run python anonimizador.py  # interfaz en el navegador (http://127.0.0.1:8765)
 ```
 
-Para compilar la app y la `.dmg` (en `dist/`):
+Para compilar la app de macOS y la `.dmg` (en `dist/`):
 
 ```sh
 ./build/build.sh
 ```
+
+La versión de Windows la compila [GitHub Actions](.github/workflows/windows.yml) al publicar una release: genera el `.zip`, comprueba que la app anonimiza correctamente (`Anonimizador.exe --selftest informe.txt`) y lo adjunta a la release. También se puede lanzar a mano desde la pestaña *Actions*.
 
 ## Software empleado
 
