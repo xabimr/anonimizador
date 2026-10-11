@@ -6,6 +6,8 @@ Aplicación de escritorio para anonimizar documentos de investigación y manuscr
 
 **Todo se procesa en el ordenador: ningún documento sale a internet.**
 
+<p align="center"><img src="docs/captura.png" width="720" alt="Ventana de Anonimizador en macOS"></p>
+
 ## Qué hace
 
 - **Formatos de entrada:** `.docx`, `.pdf`, `.txt` y `.md`. Se pueden procesar varios a la vez.
