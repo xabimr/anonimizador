@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anonimizador</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e2e0da;
+    --accent: #2f5d50; --accent-ink: #ffffff; --soft: #eaf1ee; --warn: #8a5a00; --warn-bg: #fff6e0;
+    --err: #a02c2c; --err-bg: #fbeaea; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161716; --card: #1f2120; --ink: #ecebe7; --muted: #a3a29d; --line: #343633;
+      --accent: #7fbfaa; --accent-ink: #0f1a16; --soft: #22302b; --warn: #f0c060; --warn-bg: #2d2615;
+      --err: #f08a8a; --err-bg: #2e1b1b; color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 4px 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 12px; }
+  .status { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); }
+  .status.ok { background: var(--soft); color: var(--accent); }
+  .status.err { background: var(--err-bg); color: var(--err); }
+
+  #drop { border: 2px dashed var(--line); border-radius: 10px; padding: 28px 16px; text-align: center;
+          color: var(--muted); cursor: pointer; transition: border-color .15s, background .15s; }
+  #drop.over { border-color: var(--accent); background: var(--soft); color: var(--ink); }
+  #drop strong { color: var(--ink); }
+  #files { list-style: none; margin: 12px 0 0; padding: 0; }
+  #files li { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+  #files li:first-child { border-top: 0; }
+  #files .name { overflow-wrap: anywhere; }
+  .x { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 16px; }
+  label.chk { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+  label.chk input { margin-top: 4px; }
+  label.chk small { display: block; color: var(--muted); font-size: 12px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 620px) { .two { grid-template-columns: 1fr; } }
+  .field-label { font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+  select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+           border-radius: 8px; padding: 6px 8px; margin-left: 6px; }
+  textarea, input[type=text] { width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+           border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  textarea { min-height: 96px; resize: vertical; font-size: 14px; white-space: pre-wrap; overflow-x: hidden; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row input[type=text] { flex: 1 1 260px; font-family: var(--mono); font-size: 13px; }
+  .opts { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+  input[type=range] { accent-color: var(--accent); }
+
+  button.btn { font: inherit; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+               border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+                   font-weight: 600; padding: 11px 22px; font-size: 16px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .link { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; text-decoration: underline; }
+
+  .result { border-top: 1px solid var(--line); padding: 14px 0; }
+  .result:first-of-type { border-top: 0; padding-top: 0; }
+  .result .head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+  .result .path { font-family: var(--mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+  .result.error .head strong { color: var(--err); }
+  .note { font-size: 13px; color: var(--warn); background: var(--warn-bg); border-radius: 6px; padding: 6px 10px; margin-top: 8px; }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+  td { border-top: 1px solid var(--line); padding: 5px 8px 5px 0; vertical-align: top; }
+  td:first-child { font-family: var(--mono); white-space: nowrap; color: var(--accent); }
+
+  .about { margin-top: 32px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; }
+  .about > summary { color: var(--muted); font-size: 14px; }
+  .about-body { margin-top: 12px; max-width: 68ch; }
+  .about-body p { margin: 0 0 10px; }
+  .about-body h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 6px; }
+  .about-body ul { margin: 0 0 10px; padding-left: 18px; }
+  .about-body li { margin-bottom: 4px; }
+  .about-body a { color: var(--accent); }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Anonimizador</h1>
+    <span id="status" class="status">Cargando modelo de idioma…</span>
+  </header>
+  <p class="sub">Todo se procesa en tu ordenador, nada viaja a través de internet. Admite .docx, .pdf, .txt y .md.</p>
+
+  <section class="card">
+    <h2>1 · Documentos</h2>
+    <div id="drop" tabindex="0" role="button">
+      <strong>Arrastra aquí los documentos</strong> o haz clic para elegirlos
+    </div>
+    <input id="picker" type="file" multiple accept=".docx,.pdf,.txt,.md" hidden>
+    <ul id="files"></ul>
+  </section>
+
+  <section class="card">
+    <h2>2 · Qué anonimizar</h2>
+    <div class="grid" id="entities"></div>
+    <div class="two">
+      <div>
+        <span class="field-label">Anonimizar siempre</span>
+        <p class="hint">Una por línea: nombres de autores, proyecto, universidad, grupo…</p>
+        <textarea id="extra" placeholder="Nombre Apellido Apellido&#10;Nombre del proyecto"></textarea>
+      </div>
+      <div>
+        <span class="field-label">No anonimizar nunca</span>
+        <p class="hint">Una por línea: términos que el modelo marca por error.</p>
+        <textarea id="allow" placeholder="ChatGPT&#10;España&#10;Twitter"></textarea>
+      </div>
+    </div>
+    <div class="opts">
+      <label>Formato de salida
+        <select id="format">
+          <option value="original">Igual que el original</option>
+          <option value="markdown">Markdown (.md)</option>
+        </select></label>
+      <label class="chk"><input type="checkbox" id="metadata" checked>
+        <span>Limpiar metadatos<small>Autor, empresa, autores de comentarios y cambios</small></span></label>
+      <label>Sensibilidad
+        <input type="range" id="threshold" min="0.2" max="0.9" step="0.05" value="0.4">
+        <span id="thrval"></span></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>3 · Carpeta de salida</h2>
+    <div class="row">
+      <input type="text" id="out" placeholder="/Users/…/Documentos/anonimizados" spellcheck="false">
+      <button class="btn" id="pick">Elegir…</button>
+    </div>
+  </section>
+
+  <div class="actions">
+    <button class="btn primary" id="run" disabled>Anonimizar</button>
+    <button class="link" id="quit">Cerrar el anonimizador</button>
+  </div>
+
+  <section class="card" id="results-card" style="margin-top:16px" hidden>
+    <h2>Resultado</h2>
+    <div id="results"></div>
+  </section>
+
+  <details class="about" id="about">
+    <summary>Sobre la aplicación</summary>
+    <div class="about-body">
+      <p><strong>Anonimizador</strong> · versión 1.0</p>
+      <p>Herramienta para anonimizar documentos de investigación y manuscritos antes de compartirlos o enviarlos a revisión ciega. Detecta nombres, instituciones, correos, teléfonos, DNI, IBAN, ORCID y otros datos personales, y los sustituye por marcadores o, en PDF, los tapa.</p>
+      <p><strong>Privacidad.</strong> Todo el análisis se hace en este ordenador. Los documentos no se envían a ningún servidor ni se conectan a internet.</p>
+      <p><strong>Limitaciones.</strong> La detección automática no es infalible: revisa siempre la lista de elementos anonimizados antes de difundir un documento. La herramienta no sustituye la revisión humana ni el cumplimiento del RGPD.</p>
+      <h3>Software empleado</h3>
+      <ul>
+        <li><a href="https://github.com/microsoft/presidio">Presidio</a> (Microsoft): detección de datos personales · MIT</li>
+        <li><a href="https://spacy.io">spaCy</a> y el modelo <a href="https://spacy.io/models/es">es_core_news_lg</a> (Explosion): análisis del español · MIT / GPL-3.0</li>
+        <li><a href="https://pymupdf.readthedocs.io">PyMuPDF y pymupdf4llm</a> (Artifex): lectura, tachado y conversión de PDF · AGPL-3.0</li>
+        <li><a href="https://pywebview.flowrl.com">pywebview</a>: ventana nativa · BSD-3</li>
+        <li><a href="https://www.python.org">Python</a> · PSF</li>
+      </ul>
+      <h3>Autoría y licencia</h3>
+      <p>© 2026 Universidade de Vigo. Desarrollo: Xabier Martínez Rolán.<br>
+         Contacto: xabier.rolan@uvigo.gal (<a href="mailto:xabier.rolan@uvigo.gal">escribir</a>)</p>
+      <p>Código bajo licencia <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL-3.0</a>. Icono y documentación bajo <a href="https://creativecommons.org/licenses/by/4.0/deed.es">CC BY 4.0</a>.</p>
+      <p class="muted">Desarrollado con la ayuda de Claude (Anthropic).</p>
+    </div>
+  </details>
+</main>
+
+<script>
+const ENTITIES = [
+  ["PERSON", "Personas", "Nombres propios", true],
+  ["ORGANIZATION", "Organizaciones", "Universidades, empresas…", true],
+  ["LOCATION", "Lugares", "Ciudades, países…", false],
+  ["EMAIL", "Emails", "", true],
+  ["PHONE", "Teléfonos", "", true],
+  ["DNI", "DNI / NIE", "", true],
+  ["IBAN", "IBAN", "", true],
+  ["ORCID", "ORCID", "", true],
+  ["URL", "Enlaces", "Incluye DOIs y webs", false],
+];
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("anon." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("anon." + k, JSON.stringify(v)); } catch {} },
+};
+let files = [];
+let ready = false;
+
+// opciones guardadas entre sesiones
+const savedEnt = store.get("entities", null);
+$("entities").innerHTML = ENTITIES.map(([id, name, hint, def]) => {
+  const on = savedEnt ? savedEnt.includes(id) : def;
+  return `<label class="chk"><input type="checkbox" value="${id}" ${on ? "checked" : ""}>
+          <span>${name}${hint ? `<small>${hint}</small>` : ""}</span></label>`;
+}).join("");
+$("extra").value = store.get("extra", "");
+$("allow").value = store.get("allow", "");
+$("out").value = store.get("out", "");
+$("metadata").checked = store.get("metadata", true);
+$("format").value = store.get("format", "original");
+$("threshold").value = store.get("threshold", 0.4);
+const showThr = () => $("thrval").textContent =
+  +$("threshold").value <= 0.35 ? "alta" : +$("threshold").value >= 0.6 ? "baja" : "media";
+showThr();
+$("threshold").oninput = showThr;
+
+function options() {
+  const lines = id => $(id).value.split("\n").map(s => s.trim()).filter(Boolean);
+  const o = {
+    entities: [...document.querySelectorAll("#entities input:checked")].map(i => i.value),
+    extra: lines("extra"), allow: lines("allow"),
+    threshold: +$("threshold").value, metadata: $("metadata").checked,
+    format: $("format").value,
+  };
+  store.set("format", o.format);
+  store.set("entities", o.entities); store.set("extra", $("extra").value);
+  store.set("allow", $("allow").value); store.set("out", $("out").value.trim());
+  store.set("metadata", o.metadata); store.set("threshold", o.threshold);
+  return o;
+}
+
+function renderFiles() {
+  $("files").innerHTML = files.map((f, i) =>
+    `<li><span class="name">${esc(f.name)}</span><button class="x" data-i="${i}" title="Quitar">×</button></li>`).join("");
+  updateRun();
+}
+$("files").onclick = e => { if (e.target.dataset.i) { files.splice(+e.target.dataset.i, 1); renderFiles(); } };
+function addFiles(list) {
+  for (const f of list) {
+    if (!/\.(docx|pdf|txt|md)$/i.test(f.name)) continue;
+    if (!files.some(g => g.name === f.name && g.size === f.size)) files.push(f);
+  }
+  renderFiles();
+}
+function updateRun() { $("run").disabled = !ready || !files.length; }
+
+const drop = $("drop");
+drop.onclick = () => $("picker").click();
+drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") $("picker").click(); };
+$("picker").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => addFiles(e.dataTransfer.files));
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => e.preventDefault());
+
+$("pick").onclick = async () => {
+  // en la app se usa el diálogo nativo de la ventana; en el navegador, el de AppleScript
+  const r = window.pywebview?.api
+    ? { path: await window.pywebview.api.pick_folder() }
+    : await fetch("/api/pick-folder", { method: "POST" }).then(r => r.json());
+  if (r.path) { $("out").value = r.path; store.set("out", r.path); }
+};
+
+$("run").onclick = async () => {
+  const out = $("out").value.trim();
+  if (!out) { $("out").focus(); $("out").placeholder = "Elige primero una carpeta de salida"; return; }
+  const opts = options();
+  const batch = Date.now().toString(36);
+  $("run").disabled = true;
+  $("results-card").hidden = false;
+  $("results").innerHTML = "";
+  for (const f of [...files]) {
+    const box = document.createElement("div");
+    box.className = "result";
+    box.innerHTML = `<div class="head"><strong>${esc(f.name)}</strong><span class="path">Procesando…</span></div>`;
+    $("results").appendChild(box);
+    let r;
+    try {
+      const q = new URLSearchParams({ name: f.name, out, batch });
+      r = await fetch("/api/anonymize?" + q, {
+        method: "POST", body: f,
+        headers: { "X-Options": encodeURIComponent(JSON.stringify(opts)) },
+      }).then(r => r.json());
+    } catch (err) { r = { error: "Sin conexión con el anonimizador. ¿Se ha cerrado?" }; }
+    renderResult(box, f, r);
+  }
+  updateRun();
+};
+
+function renderResult(box, f, r) {
+  if (r.error) {
+    box.classList.add("error");
+    box.innerHTML = `<div class="head"><strong>${esc(f.name)}</strong><span>${esc(r.error)}</span></div>`;
+    return;
+  }
+  const n = r.found.length;
+  const rows = r.found.map(e => `<tr><td>${esc(e.placeholder)}</td><td>${e.texts.map(esc).join(" · ")}</td></tr>`).join("");
+  box.innerHTML = `
+    <div class="head"><strong>${esc(f.name)}</strong>
+      <button class="link" data-path="${esc(r.output)}">Mostrar en Finder</button></div>
+    <div class="path">${esc(r.output)}</div>
+    ${r.notes.map(t => `<div class="note">${esc(t)}</div>`).join("")}
+    ${n ? `<details><summary>${n} elemento${n > 1 ? "s" : ""} anonimizado${n > 1 ? "s" : ""}: revisa la lista</summary>
+             <div class="tablewrap"><table>${rows}</table></div></details>`
+        : `<div class="note">No se ha encontrado nada que anonimizar.</div>`}`;
+  box.querySelector("[data-path]").onclick = e =>
+    fetch("/api/reveal?" + new URLSearchParams({ path: e.target.dataset.path }), { method: "POST" });
+}
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+$("quit").onclick = async () => {
+  await fetch("/api/quit", { method: "POST" }).catch(() => {});
+  document.body.innerHTML = '<main><h1>Anonimizador cerrado</h1><p class="sub">Puedes cerrar esta pestaña. Para volver a usarlo, abre la app Anonimizador.</p></main>';
+};
+
+// los enlaces de "Sobre la aplicación" se abren en el navegador (o en Mail), no dentro de la ventana
+$("about").addEventListener("click", e => {
+  const a = e.target.closest("a[href]");
+  if (!a) return;
+  e.preventDefault();
+  if (window.pywebview?.api) window.pywebview.api.open_url(a.href);
+  else window.open(a.href, "_blank", "noopener");
+});
+
+async function poll() {
+  try {
+    const s = await fetch("/api/status").then(r => r.json());
+    if (s.error) { $("status").textContent = "Error al cargar el modelo"; $("status").className = "status err"; console.error(s.error); return; }
+    if (s.app) $("quit").hidden = true;  // en la app se cierra con la ventana
+    if (s.ready) { ready = true; $("status").hidden = true; updateRun(); return; }
+  } catch {}
+  setTimeout(poll, 1000);
+}
+poll();
+</script>
+</body>
+</html>
