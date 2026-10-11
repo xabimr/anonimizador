@@ -198,6 +198,7 @@ const store = {
 };
 let files = [];
 let ready = false;
+let revealLabel = "Mostrar en Finder";
 
 // opciones guardadas entre sesiones
 const savedEnt = store.get("entities", null);
@@ -301,7 +302,7 @@ function renderResult(box, f, r) {
   const rows = r.found.map(e => `<tr><td>${esc(e.placeholder)}</td><td>${e.texts.map(esc).join(" · ")}</td></tr>`).join("");
   box.innerHTML = `
     <div class="head"><strong>${esc(f.name)}</strong>
-      <button class="link" data-path="${esc(r.output)}">Mostrar en Finder</button></div>
+      <button class="link" data-path="${esc(r.output)}">${revealLabel}</button></div>
     <div class="path">${esc(r.output)}</div>
     ${r.notes.map(t => `<div class="note">${esc(t)}</div>`).join("")}
     ${n ? `<details><summary>${n} elemento${n > 1 ? "s" : ""} anonimizado${n > 1 ? "s" : ""}: revisa la lista</summary>
@@ -331,6 +332,7 @@ async function poll() {
   try {
     const s = await fetch("/api/status").then(r => r.json());
     if (s.error) { $("status").textContent = "Error al cargar el modelo"; $("status").className = "status err"; console.error(s.error); return; }
+    if (s.platform === "win32") revealLabel = "Mostrar en el Explorador";
     if (s.app) $("quit").hidden = true;  // en la app se cierra con la ventana
     if (s.ready) { ready = true; $("status").hidden = true; updateRun(); return; }
   } catch {}

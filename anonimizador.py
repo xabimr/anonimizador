@@ -495,6 +495,53 @@ def unique_path(folder, name, ext=None):
     return path
 
 
+# ---------------------------------------------------------------- sistema
+
+def pick_folder_dialog():
+    title = "Carpeta de salida para los documentos anonimizados"
+    if sys.platform == "darwin":
+        script = f'POSIX path of (choose folder with prompt "{title}")'
+        r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    elif sys.platform == "win32":
+        ps = ("Add-Type -AssemblyName System.Windows.Forms;"
+              "$d = New-Object System.Windows.Forms.FolderBrowserDialog;"
+              f"$d.Description = '{title}';"
+              "if ($d.ShowDialog() -eq 'OK') { $d.SelectedPath }")
+        r = subprocess.run(["powershell", "-NoProfile", "-STA", "-Command", ps], capture_output=True, text=True)
+    else:
+        return None
+    return r.stdout.strip() or None
+
+
+def reveal(path):
+    """Muestra el archivo en el Finder o en el Explorador."""
+    if sys.platform == "darwin":
+        subprocess.run(["open", "-R", path])
+    elif sys.platform == "win32":
+        subprocess.run(["explorer", "/select,", os.path.normpath(path)])
+    else:
+        subprocess.run(["xdg-open", os.path.dirname(path)])
+
+
+def selftest(report_path):
+    """Comprobación sin ventana para la integración continua: carga el modelo y anonimiza un texto."""
+    load_analyzer()
+    ok, lines = False, []
+    if state["error"]:
+        lines.append(state["error"])
+    else:
+        opts = {"entities": list(LABELS), "extra": [], "allow": [], "threshold": 0.4, "metadata": True}
+        text = ("La investigadora María López García, de la Universidad de Salamanca, "
+                "escribe desde maria.lopez@usal.es o el 600 123 456.")
+        out, report, _ = process_text(text.encode("utf-8"), opts, "selftest")
+        result = out.decode("utf-8")
+        lines.append(result)
+        ok = all(x not in result for x in ("María López", "Universidad de Salamanca", "maria.lopez@usal.es", "600 123 456"))
+    lines.append("SELFTEST OK" if ok else "SELFTEST FALLO")
+    Path(report_path).write_text("\n".join(lines), encoding="utf-8")
+    return 0 if ok else 1
+
+
 # ---------------------------------------------------------------- servidor
 
 class Handler(BaseHTTPRequestHandler):
@@ -519,7 +566,8 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif path == "/api/status":
-            self.send_json({"ready": state["analyzer"] is not None, "error": state["error"], "app": state["app"]})
+            self.send_json({"ready": state["analyzer"] is not None, "error": state["error"], "app": state["app"],
+                            "platform": sys.platform})
         else:
             self.send_error(404)
 
@@ -533,13 +581,11 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(length) if length else b""
 
-        if url.path == "/api/pick-folder":
-            script = 'POSIX path of (choose folder with prompt "Carpeta de salida para los documentos anonimizados")'
-            r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-            return self.send_json({"path": r.stdout.strip() or None})
+        if url.path == "/api/pick-folder":  # solo en modo navegador; en la app se usa el diálogo de la ventana
+            return self.send_json({"path": pick_folder_dialog()})
 
         if url.path == "/api/reveal":
-            subprocess.run(["open", "-R", q.get("path", "")])
+            reveal(q.get("path", ""))
             return self.send_json({"ok": True})
 
         if url.path == "/api/quit":

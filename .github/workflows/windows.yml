@@ -1,0 +1,62 @@
+# Compila la versión de Windows (x64), la comprueba y la adjunta a la release.
+# Se lanza sola al publicar una release, o a mano desde la pestaña Actions.
+name: Windows
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release a la que adjuntar el .zip (vacío: solo se guarda como artefacto)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Dependencias
+        run: |
+          uv sync --frozen --python 3.12
+          uv pip install pillow
+
+      - name: Compilar con PyInstaller
+        env:
+          ANON_SRC: ${{ github.workspace }}
+        run: .venv\Scripts\pyinstaller -y --log-level WARN --distpath dist --workpath work build\Anonimizador-windows.spec
+
+      - name: Autocomprobación de la app compilada
+        shell: pwsh
+        run: |
+          $report = Join-Path $PWD "selftest.txt"
+          $p = Start-Process -FilePath "dist\Anonimizador\Anonimizador.exe" -ArgumentList "--selftest", "`"$report`"" -Wait -PassThru
+          if (Test-Path $report) { Get-Content $report -Encoding utf8 } else { Write-Host "No se generó el informe" }
+          if ($p.ExitCode -ne 0) { exit 1 }
+
+      - name: Empaquetar
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\Anonimizador -DestinationPath Anonimizador-Windows.zip
+          "{0:N0} MB" -f ((Get-Item Anonimizador-Windows.zip).Length / 1MB)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Anonimizador-Windows
+          path: Anonimizador-Windows.zip
+          retention-days: 14
+
+      - name: Adjuntar a la release
+        if: github.event_name == 'release' || inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+        run: gh release upload "$env:TAG" Anonimizador-Windows.zip --clobber
