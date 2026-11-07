@@ -1,0 +1,35 @@
+{
+  "title": "Anonimizador: anonimización local de documentos para investigación y revisión ciega",
+  "upload_type": "software",
+  "description": "<p>Aplicación de escritorio para macOS y Windows que anonimiza documentos (.docx, .pdf, .txt, .md) de forma totalmente local, sin enviar datos a servicios externos. Detecta y sustituye datos personales (nombres, correos, teléfonos, direcciones, identificadores, etc.) mediante Microsoft Presidio y modelos de lenguaje de spaCy. Está pensada para preparar manuscritos para revisión por pares ciega, anonimizar transcripciones y datos cualitativos de investigación, y facilitar el cumplimiento del RGPD en el tratamiento de documentos.</p>",
+  "creators": [
+    {
+      "name": "Martínez-Rolán, Xabier",
+      "affiliation": "Universidade de Vigo",
+      "orcid": "0000-0002-7631-2292"
+    }
+  ],
+  "license": "AGPL-3.0-only",
+  "keywords": [
+    "anonimización",
+    "anonymization",
+    "protección de datos",
+    "RGPD",
+    "GDPR",
+    "Presidio",
+    "spaCy",
+    "procesamiento del lenguaje natural",
+    "revisión por pares ciega",
+    "investigación cualitativa",
+    "software libre"
+  ],
+  "language": "spa",
+  "access_right": "open",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/xabimr/anonimizador",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

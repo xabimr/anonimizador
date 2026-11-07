@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "Si utilizas este software, por favor cítalo así."
+title: "Anonimizador: anonimización local de documentos para investigación y revisión ciega"
+type: software
+authors:
+  - family-names: "Martínez-Rolán"
+    given-names: "Xabier"
+    affiliation: "Universidade de Vigo"
+    orcid: "https://orcid.org/0000-0002-7631-2292"
+version: "1.0.1"
+date-released: "2026-11-07"
+license: AGPL-3.0-only
+repository-code: "https://github.com/xabimr/anonimizador"
+keywords:
+  - anonimización
+  - anonymization
+  - RGPD
+  - Presidio
+  - spaCy
+  - revisión por pares ciega
